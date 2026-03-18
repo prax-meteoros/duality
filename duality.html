@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>On Duality</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-section: #0d0d14;
+    --bg-card: rgba(255,255,255,0.02);
+    --text-primary: #e8e4dc;
+    --text-dim: #8a8578;
+    --text-accent: #c9b99a;
+    --gold: #d4a853;
+    --gold-dim: rgba(212, 168, 83, 0.15);
+    --blue: #5b8fb9;
+    --blue-dim: rgba(91,143,185,0.12);
+    --violet: #7b68ae;
+    --violet-dim: rgba(123,104,174,0.12);
+    --rose: #b5727a;
+    --rose-dim: rgba(181,114,122,0.12);
+    --green: #6a9e78;
+    --green-dim: rgba(106,158,120,0.12);
+  }
+
+  html { scroll-behavior: smooth; scrollbar-width: thin; scrollbar-color: var(--text-dim) var(--bg-deep); }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: 'Libre Baskerville', Georgia, serif;
+    line-height: 1.85;
+    overflow-x: hidden;
+  }
+
+  ::selection { background: var(--gold-dim); color: var(--gold); }
+
+  /* ── TABLE OF CONTENTS ── */
+  .toc-trigger {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 1000;
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(138,133,120,0.25);
+    border-radius: 50%;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(10px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+  }
+  .toc-trigger:hover { border-color: var(--gold); }
+  .toc-trigger span { display: block; width: 14px; height: 1px; background: var(--text-dim); position: relative; transition: background 0.3s; }
+  .toc-trigger span::before, .toc-trigger span::after { content:''; position:absolute; left:0; width:100%; height:1px; background: var(--text-dim); }
+  .toc-trigger span::before { top: -4px; }
+  .toc-trigger span::after { top: 4px; }
+
+  .toc-panel {
+    position: fixed;
+    top: 0; right: -320px;
+    width: 300px;
+    height: 100vh;
+    background: rgba(10,10,15,0.96);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(138,133,120,0.1);
+    z-index: 999;
+    padding: 5rem 2rem 2rem;
+    transition: right 0.4s cubic-bezier(0.25,0.46,0.45,0.94);
+    overflow-y: auto;
+  }
+  .toc-panel.open { right: 0; }
+  .toc-panel a {
+    display: block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    text-decoration: none;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid rgba(138,133,120,0.06);
+    transition: color 0.3s, padding-left 0.3s;
+  }
+  .toc-panel a:hover { color: var(--gold); padding-left: 0.5rem; }
+  .toc-panel .toc-num { color: rgba(212,168,83,0.3); margin-right: 0.8rem; }
+
+  /* ── CHAPTER MARKER ── */
+  .chapter-marker {
+    text-align: center;
+    padding: 6rem 2rem 2rem;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 1s ease, transform 1s ease;
+  }
+  .chapter-marker.visible { opacity: 1; transform: translateY(0); }
+  .chapter-marker .ch-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--gold);
+    opacity: 0.5;
+  }
+  .chapter-marker .ch-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 300;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    color: var(--text-primary);
+    margin-top: 0.8rem;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── OPENING ── */
+  .opening {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .opening canvas { position: absolute; top:0; left:0; width:100%; height:100%; z-index:0; }
+  .opening-content { position:relative; z-index:1; text-align:center; padding:2rem; }
+  .opening h1 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 300;
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    letter-spacing: 0.08em;
+    color: var(--text-primary);
+    opacity: 0;
+    animation: fadeIn 2.5s ease forwards 0.5s;
+  }
+  .opening .subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 1.5rem;
+    opacity: 0;
+    animation: fadeIn 2s ease forwards 2s;
+  }
+  .scroll-hint {
+    position:absolute; bottom:3rem; left:50%; transform:translateX(-50%); z-index:1;
+    opacity:0; animation: fadeIn 2s ease forwards 3s, float 3s ease-in-out infinite 3s;
+  }
+  .scroll-hint span { display:block; width:1px; height:40px; background:linear-gradient(to bottom, var(--text-dim), transparent); margin:0 auto; }
+  .scroll-hint small { font-family:'Space Mono',monospace; font-size:0.55rem; letter-spacing:0.3em; text-transform:uppercase; color:var(--text-dim); }
+
+  /* ── SECTIONS ── */
+  .section {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 4rem 2rem;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 1.2s ease, transform 1.2s ease;
+  }
+  .section.visible { opacity:1; transform:translateY(0); }
+  .section h2 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 300;
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    color: var(--text-accent);
+    margin-bottom: 2rem;
+    letter-spacing: 0.03em;
+  }
+  .section h3 {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-weight: 400;
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    color: var(--text-accent);
+    margin: 3rem 0 1.2rem;
+    opacity: 0.85;
+  }
+  .section p {
+    font-size: clamp(0.95rem, 1.8vw, 1.05rem);
+    color: var(--text-primary);
+    margin-bottom: 1.5rem;
+  }
+  .section p.dim { color: var(--text-dim); font-style: italic; }
+  .section p.gold-end {
+    color: var(--gold);
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(1.05rem, 2vw, 1.2rem);
+    font-style: italic;
+    margin-top: 2rem;
+  }
+  .section .aside {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+    border-left: 1px solid var(--gold-dim);
+    padding-left: 1.2rem;
+    margin: 2.5rem 0;
+    line-height: 1.9;
+  }
+  .section .aside.blue { border-left-color: var(--blue-dim); border-left-color: rgba(91,143,185,0.35); }
+  .section .aside.violet { border-left-color: rgba(123,104,174,0.35); }
+  .section .aside.rose { border-left-color: rgba(181,114,122,0.35); }
+  .section .aside.green { border-left-color: rgba(106,158,120,0.35); }
+
+  /* ── MATH DISPLAY ── */
+  .math-block {
+    text-align: center;
+    padding: 2rem 1rem;
+    margin: 2rem 0;
+    background: rgba(255,255,255,0.015);
+    border: 1px solid rgba(212,168,83,0.06);
+    border-radius: 2px;
+  }
+  .math-block .equation {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: clamp(1.3rem, 3vw, 1.8rem);
+    font-style: italic;
+    color: var(--text-accent);
+    letter-spacing: 0.06em;
+  }
+  .math-block .math-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-top: 0.8rem;
+  }
+
+  /* ── CONCEPT CARDS ── */
+  .concept-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 2.5rem 0;
+  }
+  .concept-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(138,133,120,0.08);
+    padding: 1.5rem;
+    border-radius: 2px;
+    transition: border-color 0.4s;
+  }
+  .concept-card:hover { border-color: rgba(212,168,83,0.2); }
+  .concept-card .cc-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.6rem;
+    opacity: 0.7;
+  }
+  .concept-card .cc-body {
+    font-size: 0.88rem;
+    color: var(--text-dim);
+    line-height: 1.7;
+  }
+  @media (max-width: 550px) { .concept-cards { grid-template-columns: 1fr; } }
+
+  /* ── INTERPRETATION CARDS ── */
+  .interp-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(138,133,120,0.08);
+    padding: 2rem;
+    margin: 1.5rem 0;
+    border-radius: 2px;
+    transition: border-color 0.4s;
+  }
+  .interp-card:hover { border-color: rgba(212,168,83,0.15); }
+  .interp-card .ic-name {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.2rem;
+    color: var(--text-accent);
+    margin-bottom: 0.3rem;
+  }
+  .interp-card .ic-by {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    margin-bottom: 1rem;
+  }
+  .interp-card .ic-body {
+    font-size: 0.92rem;
+    color: var(--text-primary);
+    line-height: 1.8;
+    opacity: 0.85;
+  }
+
+  /* ── ROADMAP ── */
+  .roadmap-step {
+    display: flex;
+    gap: 1.5rem;
+    margin: 2rem 0;
+    align-items: flex-start;
+  }
+  .roadmap-dot {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border: 1px solid var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--gold);
+    opacity: 0.6;
+    margin-top: 0.2rem;
+  }
+  .roadmap-body .rb-title {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.15rem;
+    color: var(--text-accent);
+    margin-bottom: 0.3rem;
+  }
+  .roadmap-body .rb-desc {
+    font-size: 0.88rem;
+    color: var(--text-dim);
+    line-height: 1.75;
+  }
+  .roadmap-body .rb-res {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+    opacity: 0.7;
+  }
+
+  /* ── DIVIDERS ── */
+  .divider {
+    text-align: center;
+    padding: 3rem 0;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+  }
+  .divider.visible { opacity: 1; }
+  .divider svg { width: 60px; height: 20px; }
+
+  /* ── EXPERIMENT CANVAS ── */
+  .experiment-wrap { margin: 3rem auto; max-width: 600px; position:relative; }
+  .experiment-wrap canvas { width:100%; height:320px; border:1px solid rgba(212,168,83,0.08); border-radius:2px; background:rgba(0,0,0,0.3); }
+  .experiment-label { font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:0.25em; text-transform:uppercase; color:var(--text-dim); text-align:center; margin-top:0.8rem; }
+  .experiment-toggle { display:flex; justify-content:center; gap:1rem; margin-top:1.2rem; }
+  .experiment-toggle button {
+    font-family:'Space Mono',monospace; font-size:0.65rem; letter-spacing:0.15em; text-transform:uppercase;
+    background:none; border:1px solid var(--text-dim); color:var(--text-dim);
+    padding:0.5rem 1.2rem; cursor:pointer; transition:all 0.4s ease; border-radius:1px;
+  }
+  .experiment-toggle button.active, .experiment-toggle button:hover {
+    border-color:var(--gold); color:var(--gold); background:var(--gold-dim);
+  }
+
+  /* ── GENERIC VIS CANVAS ── */
+  .vis-canvas-wrap { margin: 3rem auto; max-width: 600px; }
+  .vis-canvas-wrap canvas { width:100%; height:260px; border:1px solid rgba(212,168,83,0.08); border-radius:2px; background:rgba(0,0,0,0.3); }
+
+  /* ── WAVE SECTION ── */
+  .wave-section { position:relative; padding:2rem 0; overflow:hidden; }
+  .wave-section > canvas { position:absolute; top:0; left:0; width:100%; height:100%; opacity:0.2; }
+  .wave-section .section { position:relative; z-index:1; }
+
+  /* ── QUOTE BLOCK ── */
+  .quote-block {
+    max-width: 600px; margin:0 auto; padding:6rem 2rem; text-align:center;
+    opacity:0; transform:translateY(30px); transition: opacity 1.5s ease, transform 1.5s ease;
+  }
+  .quote-block.visible { opacity:1; transform:translateY(0); }
+  .quote-block blockquote {
+    font-family:'Cormorant Garamond',Georgia,serif; font-size:clamp(1.3rem,3vw,1.8rem);
+    font-weight:300; font-style:italic; color:var(--text-accent); line-height:1.7;
+  }
+  .quote-block cite {
+    display:block; margin-top:1.5rem; font-family:'Space Mono',monospace; font-size:0.65rem;
+    font-style:normal; letter-spacing:0.3em; text-transform:uppercase; color:var(--text-dim);
+  }
+
+  /* ── FINAL ── */
+  .final {
+    min-height: 70vh; display:flex; align-items:center; justify-content:center;
+    text-align:center; padding:4rem 2rem;
+  }
+  .final-content {
+    opacity:0; transform:translateY(30px); transition:opacity 2s ease, transform 2s ease;
+  }
+  .final-content.visible { opacity:1; transform:translateY(0); }
+  .final-content h2 {
+    font-family:'Cormorant Garamond',Georgia,serif; font-weight:300;
+    font-size:clamp(2rem,5vw,3.5rem); color:var(--text-primary); margin-bottom:2rem; letter-spacing:0.05em;
+  }
+  .final-content p { font-size:clamp(0.95rem,1.8vw,1.05rem); max-width:520px; margin:0 auto 1.5rem; line-height:2; }
+  .final-content p.gold {
+    color:var(--gold); font-family:'Cormorant Garamond',Georgia,serif;
+    font-size:clamp(1.1rem,2.2vw,1.35rem); font-style:italic; margin-top:3rem;
+  }
+
+  /* ── NOISE ── */
+  .noise {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    pointer-events:none; z-index:9999; opacity:0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 128px 128px;
+  }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar {
+    position: fixed; top: 0; left: 0; height: 1px; background: var(--gold);
+    z-index: 10000; width: 0%; transition: width 0.1s linear; opacity: 0.5;
+  }
+
+  /* ── KEYFRAMES ── */
+  @keyframes fadeIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes float { 0%,100% { transform:translateX(-50%) translateY(0); } 50% { transform:translateX(-50%) translateY(8px); } }
+
+  @media (max-width: 600px) {
+    .section { padding: 3.5rem 1.5rem; }
+    .quote-block { padding: 4rem 1.5rem; }
+    .experiment-wrap canvas, .vis-canvas-wrap canvas { height: 220px; }
+    .toc-panel { width: 260px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="noise"></div>
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- TOC -->
+<div class="toc-trigger" id="tocTrigger" title="Contents"><span></span></div>
+<nav class="toc-panel" id="tocPanel">
+  <a href="#ch1"><span class="toc-num">01</span>What Is a Quantum State?</a>
+  <a href="#ch2"><span class="toc-num">02</span>Wave–Particle Duality</a>
+  <a href="#ch3"><span class="toc-num">03</span>Superposition</a>
+  <a href="#ch4"><span class="toc-num">04</span>Quantum Entanglement</a>
+  <a href="#ch5"><span class="toc-num">05</span>The Wavefunction &amp; Math</a>
+  <a href="#ch6"><span class="toc-num">06</span>The Unified Picture</a>
+  <a href="#ch7"><span class="toc-num">07</span>Misconceptions</a>
+  <a href="#ch8"><span class="toc-num">08</span>Interpretations</a>
+  <a href="#ch9"><span class="toc-num">09</span>Mental Model Summary</a>
+  <a href="#ch10"><span class="toc-num">10</span>Learning Roadmap</a>
+</nav>
+
+<!-- ═══════════════ OPENING ═══════════════ -->
+<section class="opening">
+  <canvas id="particleHero"></canvas>
+  <div class="opening-content">
+    <h1>On Duality</h1>
+    <p class="subtitle">What physics learned about the nature of everything</p>
+  </div>
+  <div class="scroll-hint">
+    <small>scroll</small>
+    <span></span>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     CH 1 — WHAT IS A QUANTUM STATE?
+     ══════════════════════════════════════════════════ -->
+<div id="ch1" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter One</div>
+  <div class="ch-title">What Is a Quantum State?</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>Before we talk about waves and particles and the strangeness that lies between them, we need a word for something more fundamental.</p>
+  <p>A <em>quantum state</em> is the complete description of a quantum system. Everything that can be known about a photon, an electron, an atom — every measurable property it might reveal — is encoded in its quantum state.</p>
+  <p>But here is the first departure from the world as you know it: a quantum state does not tell you what something <em>is</em>. It tells you what something <em>might be</em>, and with what likelihood.</p>
+
+  <div class="aside">
+    In classical physics, a state is a fact: this ball is here, moving at this speed.<br>
+    In quantum physics, a state is a catalogue of possibilities — with each possibility weighted by a probability amplitude.
+  </div>
+
+  <p>Think of it like this. A coin on a table is heads or tails. A classical state. But a coin spinning in the air — before it lands — is neither. It exists in a state that contains both outcomes, and the outcome only becomes definite when the coin lands. When you <em>look</em>.</p>
+  <p>The quantum state is the spinning coin. The mathematical object that holds all possibilities in suspension before the world forces a choice.</p>
+
+  <h3>Ket notation</h3>
+  <p>Physicists write quantum states using a notation invented by Paul Dirac, with angular brackets that look like this:</p>
+
+  <div class="math-block">
+    <div class="equation">|&psi;&rangle;</div>
+    <div class="math-label">A quantum state — "ket psi"</div>
+  </div>
+
+  <p>That symbol — |&psi;⟩ — is not a position. Not a velocity. Not a number. It is an abstract vector in an abstract space, and it contains, in compressed form, every possible outcome of every possible measurement you could perform on the system.</p>
+  <p>This is where the strangeness begins. Not with duality. Not with entanglement. With the simple, extraordinary fact that nature does not always commit to a single answer until asked.</p>
+</div>
+
+<div class="divider" data-reveal><svg viewBox="0 0 60 20"><circle cx="10" cy="10" r="1.5" fill="#8a8578"/><circle cx="30" cy="10" r="1.5" fill="#8a8578"/><circle cx="50" cy="10" r="1.5" fill="#8a8578"/></svg></div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 2 — WAVE–PARTICLE DUALITY
+     ══════════════════════════════════════════════════ -->
+<div id="ch2" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Two</div>
+  <div class="ch-title">Wave–Particle Duality</div>
+</div>
+
+<div class="section" data-reveal>
+  <h2>The particle</h2>
+  <p>Newton believed light was made of tiny corpuscles — particles, shot out like bullets from a source. Discrete. Countable. <em>Here</em>, not there.</p>
+  <p>A particle is certainty. It has a position. A trajectory. You can point to it and say: <em>there it is.</em></p>
+  <p>In 1905, Einstein showed that light strikes metal and knocks out electrons one at a time — as if it were throwing punches. Not a continuous stream, but individual packets of energy he called <em>quanta</em>.</p>
+  <div class="aside">
+    The photoelectric effect. Light arrives in packets — photons.<br>
+    Each one carries a precise amount of energy: E = hf.<br>
+    No half-photons. No fractions. Whole, or nothing.
+  </div>
+  <p>When you detect light, it always arrives as a particle. A single click on a detector. A dot on a screen. One thing, in one place, at one time.</p>
+</div>
+
+<div class="divider" data-reveal><svg viewBox="0 0 60 20"><circle cx="10" cy="10" r="1.5" fill="#8a8578"/><circle cx="30" cy="10" r="1.5" fill="#8a8578"/><circle cx="50" cy="10" r="1.5" fill="#8a8578"/></svg></div>
+
+<div class="wave-section">
+  <canvas id="waveBackground"></canvas>
+  <div class="section" data-reveal>
+    <h2>The wave</h2>
+    <p>But Thomas Young, a century before Einstein, had already proved something troubling.</p>
+    <p>He sent light through two narrow slits and watched what appeared on the other side: not two bright lines — but a pattern of many lines. Bright bands where the light reinforced itself. Dark bands where it cancelled itself out.</p>
+    <p><em>Interference.</em> Only waves do that.</p>
+    <p>A wave is possibility. It doesn't choose a path — it takes <em>all</em> paths. It spreads, bends around corners, passes through gaps, and where it meets itself, it creates patterns of extraordinary beauty.</p>
+    <div class="aside blue">
+      Constructive interference: crest meets crest. Amplification.<br>
+      Destructive interference: crest meets trough. Silence.<br>
+      Two things, overlapping, creating something new.
+    </div>
+    <p>When light travels, it moves like a wave. Not here or there, but everywhere at once — a shimmering field of probability, undulating through space.</p>
+  </div>
+</div>
+
+<div class="section" data-reveal>
+  <h2>The paradox</h2>
+  <p>So which is it?</p>
+  <p>Here is where the universe refuses to simplify itself for us.</p>
+  <p>Light is not a particle. Light is not a wave. Light is <em>both</em>. Not alternating. Not compromising. Both, completely, at the same time.</p>
+  <p>When you look for a particle, you find one. When you look for a wave, you find one. The question you ask determines the answer you get.</p>
+
+  <h3>De Broglie's insight</h3>
+  <p>In 1924, Louis de Broglie proposed something audacious: this duality doesn't just apply to light. It applies to <em>everything</em>. Every particle of matter — every electron, every atom, every molecule — has a wavelength.</p>
+
+  <div class="math-block">
+    <div class="equation">&lambda; = h / p</div>
+    <div class="math-label">De Broglie wavelength — matter has a wave nature</div>
+  </div>
+
+  <p>The heavier something is, the shorter its wavelength — so short that for a baseball or a human being, it is immeasurably small. But for an electron, the wavelength is enormous relative to its size. Electrons diffract. They interfere. They behave like waves.</p>
+  <p>Duality is not a quirk of light. It is a property of existence itself.</p>
+</div>
+
+<div class="section" data-reveal>
+  <h2>See it yourself</h2>
+  <p>The double-slit experiment — the most beautiful experiment in physics. Photons are fired one at a time through two slits. Watch what builds on the screen.</p>
+
+  <div class="experiment-wrap">
+    <canvas id="doubleSlit"></canvas>
+    <div class="experiment-label">Double-slit experiment</div>
+    <div class="experiment-toggle">
+      <button id="btnWave" class="active">Unobserved</button>
+      <button id="btnParticle">Observed</button>
+    </div>
+  </div>
+
+  <p>When no one watches which slit the photon passes through, the particles build an <em>interference pattern</em> — as if each single photon went through both slits simultaneously and interfered with itself.</p>
+  <p>But the moment you place a detector at the slits — the moment you <em>observe</em> — the interference vanishes. Two clean bands. Particles behaving like particles. As if they knew they were being watched.</p>
+  <p class="dim">This is not a metaphor. This is what happens. Every time. Without exception.</p>
+</div>
+
+<div class="quote-block" data-reveal>
+  <blockquote>"Anyone who is not shocked by quantum theory has not understood it."</blockquote>
+  <cite>Niels Bohr</cite>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 3 — SUPERPOSITION
+     ══════════════════════════════════════════════════ -->
+<div id="ch3" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Three</div>
+  <div class="ch-title">Superposition</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>The double-slit experiment hinted at something that the mathematics would soon make undeniable: before measurement, a quantum system does not exist in one state or another. It exists in a <em>superposition</em> — a combination of multiple states simultaneously.</p>
+  <p>This is not a gap in our knowledge. The electron is not secretly going through slit A or slit B while we aren't looking. The mathematics — and every experiment ever performed — insists that it goes through <em>both</em>. Not "both in our ignorance." Both, literally, in reality.</p>
+
+  <div class="math-block">
+    <div class="equation">|&psi;&rangle; = &alpha;|A&rangle; + &beta;|B&rangle;</div>
+    <div class="math-label">A superposition of two states — A and B coexist</div>
+  </div>
+
+  <p>The coefficients &alpha; and &beta; are complex numbers called <em>probability amplitudes</em>. Their squared magnitudes give the probabilities of finding the system in state A or B when measured. But between measurements, both terms are real. Both are present. The system is genuinely, physically, in both states at once.</p>
+
+  <h3>Schrödinger's cat</h3>
+  <p>Erwin Schrödinger invented his famous thought experiment not to celebrate superposition, but to show how absurd it seemed. A cat in a box, its fate tied to a radioactive atom: if the atom decays, the cat dies. Quantum mechanics says the atom is in a superposition of decayed and not-decayed, and so, absurdly, the cat should be simultaneously alive and dead.</p>
+  <p>The cat was meant as a <em>reductio ad absurdum</em>. But nature didn't flinch. At the quantum scale, superposition is not absurd. It is the default.</p>
+
+  <div class="vis-canvas-wrap">
+    <canvas id="superpositionVis"></canvas>
+    <div class="experiment-label">Superposition — two states coexisting as one</div>
+  </div>
+
+  <h3>Decoherence — why cats don't blur</h3>
+  <p>If superposition is real, why don't we see it in everyday life? Why isn't your coffee cup simultaneously on the table and on the floor?</p>
+  <p>The answer is <em>decoherence</em>. When a quantum system interacts with its environment — air molecules, photons, thermal vibrations — the delicate phase relationships that allow interference are destroyed, almost instantly. The superposition doesn't vanish; it <em>leaks</em> into the environment, becoming entangled with so many particles that it becomes, for all practical purposes, invisible.</p>
+  <p>Superposition is fragile. The larger and warmer the system, the faster it decoheres. An electron can remain in superposition for a long time. A cat cannot. Not because the physics is different — but because the cat is in conversation with trillions of particles, every single one of which is eavesdropping on its state.</p>
+  <p class="dim">The universe doesn't stop being quantum at the human scale. It just becomes very, very good at hiding it.</p>
+</div>
+
+<div class="divider" data-reveal><svg viewBox="0 0 60 20"><circle cx="10" cy="10" r="1.5" fill="#8a8578"/><circle cx="30" cy="10" r="1.5" fill="#8a8578"/><circle cx="50" cy="10" r="1.5" fill="#8a8578"/></svg></div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 4 — QUANTUM ENTANGLEMENT
+     ══════════════════════════════════════════════════ -->
+<div id="ch4" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Four</div>
+  <div class="ch-title">Quantum Entanglement</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>Now for the strangest thing of all.</p>
+  <p>When two particles interact and then separate, their quantum states can become linked — <em>entangled</em> — in a way that has no classical analogue. Once entangled, the measurement of one particle instantly determines the state of the other, no matter how far apart they are.</p>
+  <p>Not "influences." Not "sends a signal." <em>Determines.</em> Instantaneously. Across any distance.</p>
+
+  <div class="vis-canvas-wrap">
+    <canvas id="entanglementVis"></canvas>
+    <div class="experiment-label">Entangled pair — correlated across distance</div>
+  </div>
+
+  <p>Einstein hated this. He called it <em>"spukhafte Fernwirkung"</em> — spooky action at a distance. He believed it proved quantum mechanics was incomplete, that there must be hidden variables, predetermined instructions the particles carried with them like sealed envelopes.</p>
+
+  <h3>Bell's theorem</h3>
+  <p>In 1964, John Stewart Bell devised a theorem — and an inequality — that could distinguish between Einstein's hidden variables and genuine quantum entanglement. If particles carry predetermined instructions, their correlations must obey a mathematical limit. If quantum mechanics is right, those limits will be violated.</p>
+  <p>The experiments have been performed, repeatedly, with increasing precision. The Bell inequalities are violated. Every time. Nature chose quantum mechanics over Einstein's intuition.</p>
+
+  <div class="aside violet">
+    Entanglement does not transmit information faster than light.<br>
+    You cannot use it to send a message — the outcomes appear random locally.<br>
+    Only when you compare results do the correlations emerge.<br>
+    The "spookiness" is in the correlation, not in communication.
+  </div>
+
+  <h3>What entanglement is — and isn't</h3>
+  <p>Entanglement means two systems share a single quantum state that cannot be factored into independent parts. The whole is not the sum of its parts — the whole is all there is. The individual particles, taken alone, are incomplete descriptions of reality.</p>
+  <p>This is not telepathy. Not faster-than-light signalling. It is something more subtle and more profound: a demonstration that the universe, at its deepest level, is not made of independent objects with independent properties. It is <em>relational</em>. Things are defined not by what they are in isolation, but by how they are connected.</p>
+
+  <p class="gold-end">Separated in space, still part of a single whole. That is what entanglement is.</p>
+</div>
+
+<div class="quote-block" data-reveal>
+  <blockquote>"The opposite of a correct statement is a false statement. But the opposite of a profound truth may well be another profound truth."</blockquote>
+  <cite>Niels Bohr</cite>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 5 — THE WAVEFUNCTION & MATH
+     ══════════════════════════════════════════════════ -->
+<div id="ch5" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Five</div>
+  <div class="ch-title">The Wavefunction &amp; Math</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>Behind all the strangeness is a single mathematical object that governs everything: the <em>wavefunction</em>, written &Psi; (psi).</p>
+  <p>The wavefunction is a complex-valued function that assigns a probability amplitude to every possible configuration of a system. It doesn't tell you where a particle <em>is</em>. It tells you, at every point in space and time, the amplitude for it to <em>be found there</em>.</p>
+
+  <h3>The Schrödinger equation</h3>
+  <p>The evolution of the wavefunction in time is governed by the most important equation in quantum mechanics:</p>
+
+  <div class="math-block">
+    <div class="equation">iℏ &part;&Psi;/&part;t = &Ĥ;&Psi;</div>
+    <div class="math-label">The Schrödinger equation — how quantum states evolve</div>
+  </div>
+
+  <p>On the left: how the wavefunction changes with time. On the right: the Hamiltonian operator Ĥ, which encodes the total energy of the system. This equation is deterministic — given the wavefunction at one moment, it predicts the wavefunction at every future moment with perfect precision.</p>
+  <p>The paradox: the evolution of possibilities is perfectly predictable. It is only when we <em>observe</em> — when we extract a definite outcome — that probability enters. The wavefunction evolves like clockwork. The measurement shatters the clockwork into chance.</p>
+
+  <h3>Born's rule</h3>
+  <p>Max Born discovered the link between the wavefunction and actual measurement: the probability of finding a particle at position x is given by the <em>square</em> of the amplitude.</p>
+
+  <div class="math-block">
+    <div class="equation">P(x) = |&Psi;(x)|&sup2;</div>
+    <div class="math-label">Born's rule — probability from amplitude</div>
+  </div>
+
+  <p>This single rule bridges the abstract mathematics and the concrete laboratory. Amplitudes are complex numbers; probabilities are real. The wavefunction lives in an abstract space; Born's rule connects it to clicks on a detector and dots on a screen.</p>
+
+  <h3>Heisenberg's uncertainty principle</h3>
+  <p>The wavefunction reveals a fundamental limitation on what can be simultaneously known. The more precisely you know a particle's position, the less precisely you can know its momentum — and vice versa.</p>
+
+  <div class="math-block">
+    <div class="equation">&Delta;x &middot; &Delta;p &ge; ℏ/2</div>
+    <div class="math-label">Heisenberg's uncertainty principle</div>
+  </div>
+
+  <p>This is not about imperfect instruments. It is not about disturbing the particle by measuring it. It is a property of nature itself. A particle with a perfectly defined position has a wavefunction that is a sharp spike — and a sharp spike, when decomposed into waves, requires an infinite spread of wavelengths. Definite position means utterly indefinite momentum. The two are mathematically conjugate — tightening one inevitably loosens the other.</p>
+
+  <div class="aside green">
+    Uncertainty is not ignorance. It is a structural feature of reality.<br>
+    The universe does not <em>have</em> a simultaneous precise position and momentum to hide from us.<br>
+    These properties, at that precision, simply do not co-exist.
+  </div>
+</div>
+
+<div class="divider" data-reveal><svg viewBox="0 0 60 20"><circle cx="10" cy="10" r="1.5" fill="#8a8578"/><circle cx="30" cy="10" r="1.5" fill="#8a8578"/><circle cx="50" cy="10" r="1.5" fill="#8a8578"/></svg></div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 6 — THE UNIFIED PICTURE
+     ══════════════════════════════════════════════════ -->
+<div id="ch6" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Six</div>
+  <div class="ch-title">The Unified Picture</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>Now step back and see how every piece connects.</p>
+  <p>A quantum system exists in a <strong>quantum state</strong> — a mathematical description of all its possibilities. That state evolves smoothly in time according to the Schrödinger equation. While evolving, the system can be in a <strong>superposition</strong> of multiple outcomes simultaneously.</p>
+  <p>When the system interacts with a measuring device, one outcome is selected — and the probabilities of each outcome are given by <strong>Born's rule</strong> applied to the wavefunction. Before measurement, a particle is neither wave nor particle — it is described by a wavefunction that exhibits <strong>wave-particle duality</strong>, manifesting as one or the other depending on the experiment.</p>
+  <p>When two systems interact, they can become <strong>entangled</strong> — their states fused into a single, inseparable whole. And through it all, the <strong>uncertainty principle</strong> sets fundamental limits on what can be simultaneously known.</p>
+
+  <div class="concept-cards">
+    <div class="concept-card">
+      <div class="cc-title">Quantum state</div>
+      <div class="cc-body">The complete description of what a system might do</div>
+    </div>
+    <div class="concept-card">
+      <div class="cc-title">Superposition</div>
+      <div class="cc-body">Being in multiple states at once — genuinely, not metaphorically</div>
+    </div>
+    <div class="concept-card">
+      <div class="cc-title">Wavefunction</div>
+      <div class="cc-body">The mathematical encoding of all superposed possibilities</div>
+    </div>
+    <div class="concept-card">
+      <div class="cc-title">Measurement</div>
+      <div class="cc-body">The act that collapses possibility into a single definite outcome</div>
+    </div>
+    <div class="concept-card">
+      <div class="cc-title">Duality</div>
+      <div class="cc-body">Wave and particle are complementary faces of the same thing</div>
+    </div>
+    <div class="concept-card">
+      <div class="cc-title">Entanglement</div>
+      <div class="cc-body">Two systems sharing a single state that cannot be separated</div>
+    </div>
+    <div class="concept-card">
+      <div class="cc-title">Uncertainty</div>
+      <div class="cc-body">Complementary properties cannot both be perfectly defined</div>
+    </div>
+    <div class="concept-card">
+      <div class="cc-title">Decoherence</div>
+      <div class="cc-body">How the quantum world hides itself at the classical scale</div>
+    </div>
+  </div>
+
+  <p>These are not separate theories. They are facets of a single, coherent framework — quantum mechanics — that has been tested more precisely than any other theory in the history of science. Its predictions have never been wrong.</p>
+  <p class="dim">The universe is not classical with quantum exceptions. It is quantum, with classical appearances.</p>
+</div>
+
+<div class="divider" data-reveal><svg viewBox="0 0 60 20"><circle cx="10" cy="10" r="1.5" fill="#8a8578"/><circle cx="30" cy="10" r="1.5" fill="#8a8578"/><circle cx="50" cy="10" r="1.5" fill="#8a8578"/></svg></div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 7 — MISCONCEPTIONS
+     ══════════════════════════════════════════════════ -->
+<div id="ch7" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Seven</div>
+  <div class="ch-title">Misconceptions</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>Quantum mechanics is the most misrepresented theory in popular culture. Here is what it does <em>not</em> say.</p>
+
+  <h3>"Consciousness causes collapse"</h3>
+  <p>This is the most persistent myth. The idea that human consciousness is somehow special in quantum mechanics — that it takes a mind to collapse a wavefunction. It doesn't. Any interaction with a sufficiently complex environment counts as a "measurement." A Geiger counter collapses a wavefunction. A photon bouncing off dust collapses a wavefunction. No mind required. Decoherence is physical, not mental.</p>
+
+  <h3>"The observer effect means reality is subjective"</h3>
+  <p>The observer effect in quantum mechanics is about physical interaction, not philosophical subjectivity. When we say "observation" changes a system, we mean that extracting information requires an interaction — a photon must bounce off an electron for you to "see" it, and that photon kicks the electron. The word "observer" is misleading. A better word would be "interactor."</p>
+
+  <h3>"Quantum mechanics only applies to tiny things"</h3>
+  <p>Quantum mechanics applies to everything. It doesn't switch off at a certain size. Superconductors, superfluids, neutron stars, and the large-scale structure of the universe all require quantum mechanics. The reason we don't see superpositions in everyday life is decoherence, not a breakdown of the laws.</p>
+
+  <h3>"Entanglement allows faster-than-light communication"</h3>
+  <p>It does not. When you measure one entangled particle, the other's state is determined — but you cannot control <em>which</em> outcome you get. Your measurement looks random. It is only when you compare notes with the other observer (which requires a classical, slower-than-light signal) that the correlations appear. Entanglement is correlation, not communication.</p>
+
+  <h3>"Quantum mechanics is just probability"</h3>
+  <p>Classical probability is about ignorance — a coin is heads or tails, you just don't know which. Quantum probability is fundamentally different. The amplitudes are complex numbers that interfere with each other. It is this interference — constructive, destructive, and everything between — that distinguishes quantum probability from classical uncertainty. Superposition is not coin-flipping. It is something without classical analogue.</p>
+
+  <div class="aside rose">
+    The strangeness of quantum mechanics is real.<br>
+    But it is precise, mathematical, and testable — not mystical.<br>
+    When someone uses the word "quantum" to sell you something, be skeptical.<br>
+    The universe is strange enough without our help.
+  </div>
+</div>
+
+<div class="divider" data-reveal><svg viewBox="0 0 60 20"><circle cx="10" cy="10" r="1.5" fill="#8a8578"/><circle cx="30" cy="10" r="1.5" fill="#8a8578"/><circle cx="50" cy="10" r="1.5" fill="#8a8578"/></svg></div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 8 — INTERPRETATIONS
+     ══════════════════════════════════════════════════ -->
+<div id="ch8" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Eight</div>
+  <div class="ch-title">Interpretations</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>The mathematics of quantum mechanics is unambiguous. It works. It predicts. It has never failed. But what it <em>means</em> — what is actually happening when a superposition collapses, what the wavefunction really <em>is</em> — is still debated.</p>
+  <p>These are the major interpretations. They agree on every prediction. They disagree on the nature of reality.</p>
+
+  <div class="interp-card">
+    <div class="ic-name">The Copenhagen Interpretation</div>
+    <div class="ic-by">Bohr, Heisenberg &middot; 1920s</div>
+    <div class="ic-body">The wavefunction is a tool for calculating probabilities, not a description of reality itself. When a measurement occurs, the wavefunction "collapses" — and asking what the system was doing before measurement is meaningless. There is no deeper reality beneath the probabilities. The question "what is really happening?" has no answer. Shut up and calculate.</div>
+  </div>
+
+  <div class="interp-card">
+    <div class="ic-name">Many-Worlds Interpretation</div>
+    <div class="ic-by">Hugh Everett III &middot; 1957</div>
+    <div class="ic-body">The wavefunction never collapses. Instead, every quantum measurement causes the universe to branch. In one branch, the electron went through slit A. In another, slit B. Both outcomes happen — both are equally real — in separate, non-communicating branches of an ever-splitting multiverse. There is no collapse, only the illusion of it from within each branch.</div>
+  </div>
+
+  <div class="interp-card">
+    <div class="ic-name">Pilot Wave Theory</div>
+    <div class="ic-by">De Broglie, David Bohm &middot; 1927 / 1952</div>
+    <div class="ic-body">Particles are real, definite objects with real, definite positions at all times. But they are guided by a "pilot wave" — the wavefunction — which tells them where to go. The wave goes through both slits; the particle goes through one. The interference pattern arises because the pilot wave shapes the particle's trajectory. Deterministic, but non-local — the pilot wave depends on the entire configuration of the universe.</div>
+  </div>
+
+  <div class="interp-card">
+    <div class="ic-name">QBism (Quantum Bayesianism)</div>
+    <div class="ic-by">Fuchs, Schack &middot; 2000s</div>
+    <div class="ic-body">The wavefunction doesn't describe the system — it describes the beliefs of the agent making measurements. Quantum mechanics is a user's manual for navigating an unpredictable world, not a mirror of reality. Probabilities are personal, not objective. The "collapse" is simply an update of beliefs, like revising your confidence after seeing evidence.</div>
+  </div>
+
+  <div class="interp-card">
+    <div class="ic-name">Relational Quantum Mechanics</div>
+    <div class="ic-by">Carlo Rovelli &middot; 1996</div>
+    <div class="ic-body">Quantum states are not absolute — they are relative to the observer. A particle has properties only relative to another system that interacts with it. There is no "God's-eye view" of the quantum state. Reality is a web of interactions, and properties only exist in the context of relationships between systems.</div>
+  </div>
+
+  <p>No experiment has ever distinguished between these interpretations. They are, empirically, identical. The choice between them is — for now — a philosophical one, guided by what kind of strangeness you find most tolerable.</p>
+  <p class="dim">The universe gives us the answers. It does not tell us what they mean.</p>
+</div>
+
+<div class="quote-block" data-reveal>
+  <blockquote>"I think I can safely say that nobody understands quantum mechanics."</blockquote>
+  <cite>Richard Feynman</cite>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 9 — MENTAL MODEL SUMMARY
+     ══════════════════════════════════════════════════ -->
+<div id="ch9" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Nine</div>
+  <div class="ch-title">Mental Model Summary</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>If you've read this far, you know more about quantum mechanics than most. Here is a framework for holding it all together.</p>
+
+  <h3>The one-sentence version</h3>
+  <p class="dim">Reality is fundamentally probabilistic, relational, and dual — and the tension between these properties is not a flaw, but the architecture.</p>
+
+  <h3>The five truths</h3>
+  <p><strong>1. Nature keeps its options open.</strong> A quantum system does not commit to a definite state until forced to by interaction. Before that, all allowed possibilities coexist — as superposition.</p>
+  <p><strong>2. Measurement is participation.</strong> You cannot passively observe a quantum system. To observe is to interact, and interaction changes the system. The boundary between observer and observed is blurred.</p>
+  <p><strong>3. Complementary properties are exclusive.</strong> Some pairs of properties — position and momentum, wave and particle — cannot be simultaneously precise. Gaining certainty about one necessarily means losing it about the other. This is structural, not circumstantial.</p>
+  <p><strong>4. Connection is real.</strong> Entangled systems are a single system, regardless of distance. The universe is not made of independent parts with independent properties. It is made of relationships.</p>
+  <p><strong>5. The classical world is an approximation.</strong> The smooth, definite, predictable world of everyday experience is an emergent consequence of decoherence — the quantum world interacting with itself at such enormous scale that the strangeness averages out. But it never disappears.</p>
+
+  <h3>How to think about it</h3>
+  <p>Don't try to visualise quantum systems as tiny versions of big things. They aren't. Electrons are not little balls. Photons are not little bullets or little water waves. They are quantum objects — a category of thing that exists only at the quantum scale and has no direct analogue in human-scale experience.</p>
+  <p>The mathematics is the most honest description we have. The words — "wave," "particle," "collapse," "spin" — are metaphors borrowed from a classical world that doesn't apply. Use them as handles, not as truths.</p>
+  <p>And when the metaphors break — when the words stop making sense — you are not failing to understand. You are understanding correctly. <em>This is what understanding quantum mechanics feels like.</em></p>
+</div>
+
+<div class="divider" data-reveal><svg viewBox="0 0 60 20"><circle cx="10" cy="10" r="1.5" fill="#8a8578"/><circle cx="30" cy="10" r="1.5" fill="#8a8578"/><circle cx="50" cy="10" r="1.5" fill="#8a8578"/></svg></div>
+
+<!-- ══════════════════════════════════════════════════
+     CH 10 — LEARNING ROADMAP
+     ══════════════════════════════════════════════════ -->
+<div id="ch10" class="chapter-marker" data-reveal>
+  <div class="ch-num">Chapter Ten</div>
+  <div class="ch-title">Learning Roadmap</div>
+</div>
+
+<div class="section" data-reveal>
+  <p>If this has made you curious — and it should — here is a path forward. From intuition to rigor, from wonder to understanding.</p>
+
+  <div class="roadmap-step">
+    <div class="roadmap-dot">1</div>
+    <div class="roadmap-body">
+      <div class="rb-title">Build Intuition</div>
+      <div class="rb-desc">Start with narrative and thought experiments. Understand <em>what</em> happens before asking <em>why</em>. Get comfortable with the strangeness — don't rush past it.</div>
+      <div class="rb-res">Read: "QED" by Feynman &middot; Watch: 3Blue1Brown's "Some light quantum mechanics"</div>
+    </div>
+  </div>
+
+  <div class="roadmap-step">
+    <div class="roadmap-dot">2</div>
+    <div class="roadmap-body">
+      <div class="rb-title">Learn the Language</div>
+      <div class="rb-desc">Complex numbers. Linear algebra — vectors, matrices, eigenvalues. This is the vocabulary of quantum mechanics. Without it, every explanation is an approximation. With it, the theory becomes shockingly simple.</div>
+      <div class="rb-res">Read: "No-Nonsense Quantum Mechanics" by Schwichtenberg &middot; Khan Academy linear algebra</div>
+    </div>
+  </div>
+
+  <div class="roadmap-step">
+    <div class="roadmap-dot">3</div>
+    <div class="roadmap-body">
+      <div class="rb-title">The Formal Framework</div>
+      <div class="rb-desc">Hilbert spaces, operators, commutation relations, the postulates of quantum mechanics. This is where you learn the real theory — not interpretations, not metaphors, but the axioms and their consequences.</div>
+      <div class="rb-res">Read: "Introduction to Quantum Mechanics" by Griffiths &middot; MIT 8.04 OpenCourseWare</div>
+    </div>
+  </div>
+
+  <div class="roadmap-step">
+    <div class="roadmap-dot">4</div>
+    <div class="roadmap-body">
+      <div class="rb-title">Applications & Experiments</div>
+      <div class="rb-desc">Quantum computing, quantum cryptography, quantum teleportation, Bose-Einstein condensates, the quantum Hall effect. See how the theory connects to technology and experiment.</div>
+      <div class="rb-res">Read: "Quantum Computing: An Applied Approach" by Hidary &middot; IBM Qiskit tutorials</div>
+    </div>
+  </div>
+
+  <div class="roadmap-step">
+    <div class="roadmap-dot">5</div>
+    <div class="roadmap-body">
+      <div class="rb-title">Philosophy & Foundations</div>
+      <div class="rb-desc">Once you know the theory, return to the interpretations with new eyes. The measurement problem. The ontology of the wavefunction. Whether quantum mechanics is complete. These questions are open — and you will now be equipped to think about them seriously.</div>
+      <div class="rb-res">Read: "Something Deeply Hidden" by Sean Carroll &middot; "Helgoland" by Carlo Rovelli</div>
+    </div>
+  </div>
+
+  <p style="margin-top: 3rem;">The path is long. But it starts with what you've already done — with curiosity, and with the willingness to be uncomfortable. The universe is not obligated to make sense on our terms. But it does reward those who look closely.</p>
+</div>
+
+<div class="divider" data-reveal><svg viewBox="0 0 60 20"><circle cx="10" cy="10" r="1.5" fill="#8a8578"/><circle cx="30" cy="10" r="1.5" fill="#8a8578"/><circle cx="50" cy="10" r="1.5" fill="#8a8578"/></svg></div>
+
+<!-- ══════════════════════════════════════════════════
+     FINAL
+     ══════════════════════════════════════════════════ -->
+<section class="final">
+  <div class="final-content" data-reveal>
+    <h2>Duality is real.</h2>
+    <p>Not a theory. Not a compromise. Not a flaw in our understanding. The most fundamental fabric of the universe insists on being two things at once.</p>
+    <p>A photon is a wave and a particle. A state is all possibilities and one outcome. Two particles, separated by the width of the universe, can be a single whole.</p>
+    <p>Things that seem to oppose each other can complete each other. Things that seem contradictory can both be true. The deepest truths are not resolved — they are held.</p>
+    <p class="gold">Some truths can only be whole when they are held as two.</p>
+  </div>
+</section>
+
+<div style="height: 8rem;"></div>
+
+<!-- ═══════════════ SCRIPTS ═══════════════ -->
+<script>
+// ── PROGRESS BAR ──
+window.addEventListener('scroll', () => {
+  const h = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('progressBar').style.width = (window.scrollY / h * 100) + '%';
+});
+
+// ── TOC ──
+const tocTrigger = document.getElementById('tocTrigger');
+const tocPanel = document.getElementById('tocPanel');
+tocTrigger.addEventListener('click', () => tocPanel.classList.toggle('open'));
+tocPanel.querySelectorAll('a').forEach(a => a.addEventListener('click', () => tocPanel.classList.remove('open')));
+document.addEventListener('click', e => { if (!tocPanel.contains(e.target) && e.target !== tocTrigger && !tocTrigger.contains(e.target)) tocPanel.classList.remove('open'); });
+
+// ── SCROLL REVEAL ──
+const revealEls = document.querySelectorAll('[data-reveal]');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.12, rootMargin: '0px 0px -30px 0px' });
+revealEls.forEach(el => observer.observe(el));
+
+// ── HERO PARTICLES ──
+(function() {
+  const canvas = document.getElementById('particleHero');
+  const ctx = canvas.getContext('2d');
+  let w, h, particles = [];
+  function resize() {
+    const dpr = devicePixelRatio;
+    w = canvas.offsetWidth; h = canvas.offsetHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function init() {
+    resize(); particles = [];
+    for (let i = 0; i < 80; i++) particles.push({ x:Math.random()*w, y:Math.random()*h, r:Math.random()*1.2+0.3, vx:(Math.random()-0.5)*0.3, vy:(Math.random()-0.5)*0.3, o:Math.random()*0.35+0.1 });
+  }
+  function draw() {
+    ctx.clearRect(0,0,w,h);
+    for (let i=0;i<particles.length;i++) {
+      const p=particles[i]; p.x+=p.vx; p.y+=p.vy;
+      if(p.x<0) p.x=w; if(p.x>w) p.x=0; if(p.y<0) p.y=h; if(p.y>h) p.y=0;
+      ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=`rgba(212,168,83,${p.o})`; ctx.fill();
+      for (let j=i+1;j<particles.length;j++) {
+        const q=particles[j]; const dx=p.x-q.x,dy=p.y-q.y,d=Math.sqrt(dx*dx+dy*dy);
+        if(d<110) { ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.strokeStyle=`rgba(212,168,83,${0.035*(1-d/110)})`; ctx.stroke(); }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  init(); window.addEventListener('resize',()=>resize()); draw();
+})();
+
+// ── WAVE BACKGROUND ──
+(function() {
+  const canvas = document.getElementById('waveBackground');
+  const ctx = canvas.getContext('2d');
+  let t=0;
+  function draw() {
+    const dpr = devicePixelRatio;
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+    canvas.width = w*dpr; canvas.height = h*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    for (let wave=0;wave<4;wave++) {
+      ctx.beginPath();
+      const amp=20+wave*8, freq=0.003-wave*0.0004, speed=0.015+wave*0.005, yBase=h*0.3+wave*(h*0.15);
+      for (let x=0;x<w;x++) {
+        const y=yBase+Math.sin(x*freq+t*speed)*amp+Math.sin(x*freq*1.5+t*speed*0.7)*amp*0.5;
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.strokeStyle=`hsla(${200+wave*15},30%,55%,${0.12-wave*0.02})`; ctx.lineWidth=1.5; ctx.stroke();
+    }
+    t++; requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── DOUBLE-SLIT EXPERIMENT ──
+(function() {
+  const canvas = document.getElementById('doubleSlit');
+  const ctx = canvas.getContext('2d');
+  let W,H,mode='wave',dots=[],frameCount=0;
+  const slitGap=28, slitWidth=4, wallX=0.38, screenX=0.88;
+
+  function resize() {
+    const r=canvas.getBoundingClientRect(), dpr=devicePixelRatio;
+    W=r.width; H=r.height; canvas.width=W*dpr; canvas.height=H*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0); dots=[];
+  }
+  resize(); window.addEventListener('resize',resize);
+
+  function interferenceProb(y,center,lambda,d,isSingle) {
+    const dy=y-center;
+    if(isSingle) { const s=12; return Math.exp(-((dy-d/2)**2)/(2*s*s))+Math.exp(-((dy+d/2)**2)/(2*s*s)); }
+    const phase=(2*Math.PI*d*dy)/(lambda*200);
+    return (Math.cos(phase)**2)*Math.exp(-(dy*dy)/4000);
+  }
+  function sampleY() {
+    const center=H/2;
+    for(let a=0;a<200;a++) { const y=Math.random()*H; if(Math.random()<interferenceProb(y,center,18,slitGap,mode==='particle')) return y; }
+    return H/2;
+  }
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const wx=W*wallX, sc=H/2;
+    ctx.fillStyle='rgba(138,133,120,0.25)';
+    ctx.fillRect(wx-1,0,2,sc-slitGap/2-slitWidth/2);
+    ctx.fillRect(wx-1,sc-slitGap/2+slitWidth/2,2,slitGap-slitWidth);
+    ctx.fillRect(wx-1,sc+slitGap/2+slitWidth/2,2,H-(sc+slitGap/2+slitWidth/2));
+    ctx.font='9px "Space Mono",monospace'; ctx.fillStyle='rgba(138,133,120,0.4)'; ctx.textAlign='center';
+    ctx.fillText('SOURCE',W*0.1,H-12); ctx.fillText('SLITS',wx,H-12); ctx.fillText('SCREEN',W*screenX,H-12);
+    if(mode==='particle') { ctx.fillStyle='rgba(212,168,83,0.4)'; ctx.beginPath(); ctx.arc(wx+14,sc,4,0,Math.PI*2); ctx.fill(); ctx.font='7px "Space Mono",monospace'; ctx.fillStyle='rgba(212,168,83,0.5)'; ctx.fillText('OBSERVER',wx+14,sc-10); }
+    ctx.strokeStyle='rgba(138,133,120,0.1)'; ctx.beginPath(); ctx.moveTo(W*screenX,0); ctx.lineTo(W*screenX,H); ctx.stroke();
+    for(const dot of dots) { dot.age++; const a=Math.min(dot.age/30,0.7); ctx.beginPath(); ctx.arc(dot.x+(Math.random()-0.5)*1.5,dot.y,0.8,0,Math.PI*2); ctx.fillStyle=mode==='wave'?`rgba(91,143,185,${a})`:`rgba(212,168,83,${a})`; ctx.fill(); }
+    frameCount++; if(frameCount%2===0) { const sX=W*screenX; dots.push({x:sX,y:sampleY(),age:0}); if(dots.length>2000) dots.shift(); }
+    requestAnimationFrame(draw);
+  }
+  draw();
+  document.getElementById('btnWave').addEventListener('click',()=>{ mode='wave'; dots=[]; document.getElementById('btnWave').classList.add('active'); document.getElementById('btnParticle').classList.remove('active'); });
+  document.getElementById('btnParticle').addEventListener('click',()=>{ mode='particle'; dots=[]; document.getElementById('btnParticle').classList.add('active'); document.getElementById('btnWave').classList.remove('active'); });
+})();
+
+// ── SUPERPOSITION VISUALISATION ──
+(function() {
+  const canvas = document.getElementById('superpositionVis');
+  const ctx = canvas.getContext('2d');
+  let t=0;
+  function draw() {
+    const dpr=devicePixelRatio, w=canvas.offsetWidth, h=canvas.offsetHeight;
+    canvas.width=w*dpr; canvas.height=h*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    const cx=w/2, cy=h/2;
+    // State A wave
+    ctx.beginPath();
+    for(let x=0;x<w;x++) {
+      const y=cy-30+Math.sin(x*0.025+t*0.03)*22;
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(91,143,185,0.5)'; ctx.lineWidth=1.2; ctx.stroke();
+    // State B wave
+    ctx.beginPath();
+    for(let x=0;x<w;x++) {
+      const y=cy+30+Math.sin(x*0.04-t*0.02)*18;
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(181,114,122,0.5)'; ctx.lineWidth=1.2; ctx.stroke();
+    // Combined superposition
+    ctx.beginPath();
+    for(let x=0;x<w;x++) {
+      const a=Math.sin(x*0.025+t*0.03)*22;
+      const b=Math.sin(x*0.04-t*0.02)*18;
+      const y=cy+(a+b)*0.6;
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.strokeStyle='rgba(212,168,83,0.7)'; ctx.lineWidth=1.8; ctx.stroke();
+    // Labels
+    ctx.font='9px "Space Mono",monospace'; ctx.textAlign='left';
+    ctx.fillStyle='rgba(91,143,185,0.6)'; ctx.fillText('|A⟩',12,cy-48);
+    ctx.fillStyle='rgba(181,114,122,0.6)'; ctx.fillText('|B⟩',12,cy+52);
+    ctx.fillStyle='rgba(212,168,83,0.6)'; ctx.fillText('α|A⟩ + β|B⟩',12,cy+4);
+    t++; requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── ENTANGLEMENT VISUALISATION ──
+(function() {
+  const canvas = document.getElementById('entanglementVis');
+  const ctx = canvas.getContext('2d');
+  let t=0;
+  function draw() {
+    const dpr=devicePixelRatio, w=canvas.offsetWidth, h=canvas.offsetHeight;
+    canvas.width=w*dpr; canvas.height=h*dpr;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,w,h);
+    const cy=h/2;
+    const leftX=w*0.2, rightX=w*0.8;
+    const separation=rightX-leftX;
+    // Connection lines (correlations)
+    for(let i=0;i<12;i++) {
+      const phase=t*0.02+i*0.5;
+      const amp=Math.sin(phase)*15;
+      ctx.beginPath();
+      ctx.moveTo(leftX,cy+amp);
+      const cpx1=leftX+separation*0.33, cpy1=cy+Math.sin(phase+1)*20;
+      const cpx2=leftX+separation*0.66, cpy2=cy+Math.sin(phase+2)*20;
+      ctx.bezierCurveTo(cpx1,cpy1,cpx2,cpy2,rightX,cy-amp);
+      ctx.strokeStyle=`rgba(123,104,174,${0.06+Math.sin(phase)*0.03})`; ctx.lineWidth=1; ctx.stroke();
+    }
+    // Particle A
+    const pulseA=1+Math.sin(t*0.05)*0.3;
+    ctx.beginPath(); ctx.arc(leftX,cy,8*pulseA,0,Math.PI*2);
+    ctx.fillStyle='rgba(91,143,185,0.15)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(leftX,cy,3,0,Math.PI*2);
+    ctx.fillStyle='rgba(91,143,185,0.8)'; ctx.fill();
+    // Particle B
+    const pulseB=1+Math.sin(t*0.05+Math.PI)*0.3;
+    ctx.beginPath(); ctx.arc(rightX,cy,8*pulseB,0,Math.PI*2);
+    ctx.fillStyle='rgba(181,114,122,0.15)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(rightX,cy,3,0,Math.PI*2);
+    ctx.fillStyle='rgba(181,114,122,0.8)'; ctx.fill();
+    // Labels
+    ctx.font='9px "Space Mono",monospace'; ctx.textAlign='center';
+    ctx.fillStyle='rgba(91,143,185,0.5)'; ctx.fillText('PARTICLE A',leftX,cy+35);
+    ctx.fillStyle='rgba(181,114,122,0.5)'; ctx.fillText('PARTICLE B',rightX,cy+35);
+    ctx.fillStyle='rgba(123,104,174,0.35)'; ctx.fillText('ENTANGLED',w/2,cy-40);
+    // Distance label
+    ctx.fillStyle='rgba(138,133,120,0.2)'; ctx.fillText('any distance',w/2,cy+55);
+    t++; requestAnimationFrame(draw);
+  }
+  draw();
+})();
+</script>
+
+</body>
+</html>
